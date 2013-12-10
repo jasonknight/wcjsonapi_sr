@@ -38,9 +38,24 @@ plugins.wcjsonapi_sr = {
         name: "url",
         type: 'text',
         size: '80'
+      },
+      debug: {
+        name: "debug",
+        type: 'yesorno',
+        size: '2'
       }
     };
     return fields;
+  },
+  after_edit_item_tools: function () {
+    var div = Salor.render_partial('items/tool_entry',{
+      mouseclick: 'wcjsonapi_sr.send_to_wp($(this),CurrentItem)',
+      href: '#',
+      icon_url: PLUGINS_BASE_URL + '/wcjsonapi_sr/wordpress_logo.svg',
+      caption: {'en': 'Send to WP'}
+    });
+    Salor.log_action("inside HOOK, div is" + div);
+    return div;
   }
 }
 /*
@@ -52,5 +67,6 @@ for (key in __plugin__) {
 Salor.add_filter('item_list_columns','wcjsonapi_sr.item_list_columns');
 Salor.add_filter('item_list_column','wcjsonapi_sr.item_list_column');
 Salor.add_filter('plugin_meta_fields_for_wcjsonapi_sr','wcjsonapi_sr.plugin_meta_fields_for_wcjsonapi_sr');
+Salor.add_hook('after_edit_item_tools','wcjsonapi_sr.after_edit_item_tools');
 
 

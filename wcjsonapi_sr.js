@@ -9,7 +9,7 @@ wcjsonapi_sr.send_to_wp = function (sender,item) {
         wcjsonapi_sr.maybeShowErrors({errors: [ {text: "Please wait until cats are loaded."} ]});
         return;
     }
-    console.log(item);
+    //console.log(item);
     var product = {
         name: item.name,
         sku: item.sku,
@@ -22,11 +22,11 @@ wcjsonapi_sr.send_to_wp = function (sender,item) {
 
     var find_req = wcjsonapi_sr.prepareRequest('get_products');
     find_req.arguments.skus = [item.sku];
-    displayMessage("notice","wcjsonapi_sr: Getting Products...");
+    displayMessage("notice","WCJSONAPI: Getting Products...");
     wcjsonapi_sr.getRequest(find_req,function (data) {
         if ( data.payload.length > 0 ) {
             var website_product = data.payload[0];
-            console.log("Website Product Is: ", website_product);
+            //console.log("Website Product Is: ", website_product);
             for ( k in product ) {
                 if ( k == "description" || k == "categories" ) {
                     // We don't override the desc.
@@ -59,14 +59,14 @@ wcjsonapi_sr.send_to_wp = function (sender,item) {
                 product.categories = [website_category];
             }
         }
-        console.log("Product is: ", product);
+        //console.log("Product is: ", product);
         var req = wcjsonapi_sr.prepareRequest('set_products');
         req.payload = [product];
         req.wcjsonapi_sr_sender = sender.attr('id');
-        displayMessage("notice","wcjsonapi_sr: Setting Products...");
+        displayMessage("notice","WCJSONAPI: Setting Products...");
         wcjsonapi_sr.getRequest(req,function (data) {
-            displayMessage("notice","wcjsonapi_sr: Done!");
-            console.log("set_products", data);
+            displayMessage("notice","WCJSONAPI: Done!");
+            //console.log("set_products", data);
             wcjsonapi_sr.maybeShowErrors(data);
             wcjsonapi_sr.maybeShowNotifications(data);
         });
@@ -164,10 +164,10 @@ wcjsonapi_sr.getRequest = function(req, callback, options) {
 }
 $(function () {
     var req = wcjsonapi_sr.prepareRequest("get_categories")
-    displayMessage("notice","wcjsonapi_sr: Loading Categories...");
+    displayMessage("notice","WCJSONAPI: Loading Categories...");
     wcjsonapi_sr.getRequest(req,function (data) {
         if ( data.status ) {
-          displayMessage("notice","wcjsonapi_sr: Loading Categories done!");
+          displayMessage("notice","WCJSONAPI: Loading Categories done!");
           wcjsonapi_sr.website_categories = data.payload;
         }
     });
