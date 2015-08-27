@@ -1,9 +1,11 @@
+wcjsonapi_sr.last_order = null;
 wcjsonapi_sr.createSlugFromName = function (name) {
     var slug = name;
     slug = slug.toLowerCase();
     slug = slug.replace(/[^a-z]/g, "-");
     return slug;
 }
+
 wcjsonapi_sr.send_to_wp = function (sender,item) {
     if ( ! wcjsonapi_sr.website_categories ) {
         wcjsonapi_sr.maybeShowErrors({errors: [ {text: "Please wait until cats are loaded."} ]});
@@ -13,16 +15,25 @@ wcjsonapi_sr.send_to_wp = function (sender,item) {
     var product = {
         name: item.name,
         sku: item.sku,
-        price: Round(item.price_cents / 100,2),
+        price: sr.fn.math.round(item.price_cents / 100,2),
         description: item.description,
         product_type: 'simple',
-        type: 'product'
+        type: 'product',
+        weight: item.weight,
+        height: item.height,
+        length: item.length
+
     }
+    product.quantity = item.quantity;
+    product.visibility = "visible";
+    product.manage_stock = 'yes';
+    product.status = 'instock';
+    product.allow_backorders = 'yes';
     
 
     var find_req = wcjsonapi_sr.prepareRequest('get_products');
     find_req.arguments.skus = [item.sku];
-    displayMessage("notice","WCJSONAPI: Getting Products...");
+    sr.fn.messages.displayMessage("notice","WCJSONAPI: Getting Products...");
     wcjsonapi_sr.getRequest(find_req,function (data) {
         if ( data.payload.length > 0 ) {
             var website_product = data.payload[0];
@@ -37,8 +48,8 @@ wcjsonapi_sr.send_to_wp = function (sender,item) {
             product = website_product;
         } else {
             var salor_category = null;
-            for ( i in Categories ) {
-                var cat = Categories[i];
+            for ( i in sr.data.resources.category_array ) {
+                var cat = sr.data.resources.category_array[i];
                 if ( cat.id == item.category_id ) {
                     salor_category = cat;
                     break;
@@ -63,9 +74,9 @@ wcjsonapi_sr.send_to_wp = function (sender,item) {
         var req = wcjsonapi_sr.prepareRequest('set_products');
         req.payload = [product];
         req.wcjsonapi_sr_sender = sender.attr('id');
-        displayMessage("notice","WCJSONAPI: Setting Products...");
+        sr.fn.messages.displayMessage("notice","WCJSONAPI: Setting Products...");
         wcjsonapi_sr.getRequest(req,function (data) {
-            displayMessage("notice","WCJSONAPI: Done!");
+            sr.fn.messages.displayMessage("notice","WCJSONAPI: Done!");
             //console.log("set_products", data);
             wcjsonapi_sr.maybeShowErrors(data);
             wcjsonapi_sr.maybeShowNotifications(data);
@@ -100,7 +111,7 @@ wcjsonapi_sr.getSettings = function () {
 }
 wcjsonapi_sr.debug = function(txt) {
     if ( wcjsonapi_sr.meta.debug == 'yes' ) {
-        console.log(txt);
+        //console.log(txt);
     }
 }
 wcjsonapi_sr.displayRequestDebug = function (req) {
@@ -162,13 +173,44 @@ wcjsonapi_sr.getRequest = function(req, callback, options) {
         console.log("getRequest SENT:", req);
     }
 }
+wcjsonapi_sr.update_server_quantities = function () {
+    if ( sr.data.pos_core.last_completed_order.id != wcjsonapi_sr.last_order.id) {
+
+        // we do this here just to be sure we don't spam the server
+        wcjsonapi_sr.last_order = sr.data.pos_core.last_completed_order;
+
+
+        var req = wcjsonapi_sr.prepareRequest('set_products_quantities',null);
+        var products = [];
+        var order_items = wcjsonapi_sr.last_order.order_items;
+        for (i in order_items) {
+            var item = order_items[i].item;
+            var product = {"sku": item.sku, "quantity": item.quantity};
+            products.push(product);
+        }
+        req.payload = products;
+        sr.fn.messages.displayMessage("notice","WCJSONAPI: Setting Updating Online Store...");
+        wcjsonapi_sr.getRequest(req,function (data) {
+            sr.fn.messages.displayMessage("notice","WCJSONAPI: Done!");
+            //console.log("set_products", data);
+            wcjsonapi_sr.maybeShowErrors(data);
+            wcjsonapi_sr.maybeShowNotifications(data);
+        });
+
+    }
+}
 $(function () {
     var req = wcjsonapi_sr.prepareRequest("get_categories")
-    displayMessage("notice","WCJSONAPI: Loading Categories...");
+    sr.fn.messages.displayMessage("notice","WCJSONAPI: Loading Categories...");
     wcjsonapi_sr.getRequest(req,function (data) {
         if ( data.status ) {
-          displayMessage("notice","WCJSONAPI: Loading Categories done!");
+          sr.fn.messages.displayMessage("notice","WCJSONAPI: Loading Categories done!");
           wcjsonapi_sr.website_categories = data.payload;
         }
     });
+    if ( sr.data.params.controller == 'orders' && sr.data.params.action == 'new' ) {
+        console.log("We are on the pos page");
+        wcjsonapi_sr.last_order = sr.data.pos_core.last_completed_order;
+        setInterval(wcjsonapi_sr.update_server_quantities,2000);
+    }
 })
